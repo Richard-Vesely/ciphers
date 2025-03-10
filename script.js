@@ -6,6 +6,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const decodeBtn = document.getElementById('decodeBtn');
     const resultElement = document.getElementById('result');
 
+    // Czech characters mapping
+    const czechAlphabet = 'aábcčdďeéěfghiíjklmnňoópqrřsštťuúůvwxyýzž';
+    const czechAlphabetUpper = czechAlphabet.toUpperCase();
+    
+    // Create maps for Czech character handling
+    const czechToIndex = new Map();
+    const indexToCzech = new Map();
+    const czechToIndexUpper = new Map();
+    const indexToCzechUpper = new Map();
+    
+    // Initialize maps
+    for (let i = 0; i < czechAlphabet.length; i++) {
+        czechToIndex.set(czechAlphabet[i], i);
+        indexToCzech.set(i, czechAlphabet[i]);
+        czechToIndexUpper.set(czechAlphabetUpper[i], i);
+        indexToCzechUpper.set(i, czechAlphabetUpper[i]);
+    }
+
     // Add event listeners to buttons
     encodeBtn.addEventListener('click', function() {
         processMessage(true);
@@ -22,20 +40,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate inputs
         if (!message) {
-            resultElement.textContent = "Please enter a message!";
+            resultElement.textContent = "Prosím, zadej zprávu!";
             return;
         }
         
         if (!codeKey) {
-            resultElement.textContent = "Please enter a code key!";
+            resultElement.textContent = "Prosím, zadej tajný klíč!";
             return;
         }
         
-        // Filter code key to only include letters
-        codeKey = codeKey.replace(/[^a-z]/g, '');
+        // Filter code key to only include Czech letters
+        codeKey = filterCzechLetters(codeKey);
         
         if (!codeKey) {
-            resultElement.textContent = "Your code key must contain at least one letter!";
+            resultElement.textContent = "Tvůj tajný klíč musí obsahovat alespoň jedno písmeno!";
             return;
         }
         
@@ -44,45 +62,73 @@ document.addEventListener('DOMContentLoaded', function() {
         resultElement.textContent = result;
     }
 
+    // Function to filter to keep only Czech letters
+    function filterCzechLetters(text) {
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            if (czechToIndex.has(text[i])) {
+                result += text[i];
+            }
+        }
+        return result;
+    }
+
     // Function to transform the message (encode or decode)
     function transformMessage(message, codeKey, isEncoding) {
         let result = '';
         let keyIndex = 0;
+        const alphabetLength = czechAlphabet.length;
         
         // Process each character in the message
         for (let i = 0; i < message.length; i++) {
             const char = message[i];
             
-            // Check if the character is a letter
-            if (/[a-zA-Z]/.test(char)) {
-                const isUpperCase = char === char.toUpperCase();
-                const letterCode = char.toLowerCase().charCodeAt(0) - 97; // 'a' is 97 in ASCII
+            // Check if the character is a Czech letter
+            if (czechToIndex.has(char)) {
+                // Lowercase letter
+                const letterIndex = czechToIndex.get(char);
                 
                 // Get the corresponding key letter
                 const keyChar = codeKey[keyIndex % codeKey.length];
-                const keyShift = keyChar.charCodeAt(0) - 97;
+                const keyShift = czechToIndex.get(keyChar);
                 
-                // Calculate new letter code (0-25)
-                let newLetterCode;
+                // Calculate new letter index
+                let newLetterIndex;
                 if (isEncoding) {
                     // For encoding: add the shift
-                    newLetterCode = (letterCode + keyShift) % 26;
+                    newLetterIndex = (letterIndex + keyShift) % alphabetLength;
                 } else {
                     // For decoding: subtract the shift
-                    newLetterCode = (letterCode - keyShift + 26) % 26;
+                    newLetterIndex = (letterIndex - keyShift + alphabetLength) % alphabetLength;
                 }
                 
                 // Convert back to a letter
-                let newChar = String.fromCharCode(newLetterCode + 97);
+                result += indexToCzech.get(newLetterIndex);
+                keyIndex++; // Move to the next key character
+            } 
+            else if (czechToIndexUpper.has(char)) {
+                // Uppercase letter
+                const letterIndex = czechToIndexUpper.get(char);
                 
-                // Restore the original case
-                if (isUpperCase) {
-                    newChar = newChar.toUpperCase();
+                // Get the corresponding key letter
+                const keyChar = codeKey[keyIndex % codeKey.length];
+                const keyShift = czechToIndex.get(keyChar);
+                
+                // Calculate new letter index
+                let newLetterIndex;
+                if (isEncoding) {
+                    // For encoding: add the shift
+                    newLetterIndex = (letterIndex + keyShift) % alphabetLength;
+                } else {
+                    // For decoding: subtract the shift
+                    newLetterIndex = (letterIndex - keyShift + alphabetLength) % alphabetLength;
                 }
                 
-                result += newChar;
+                // Convert back to a letter (uppercase)
+                result += indexToCzechUpper.get(newLetterIndex);
                 keyIndex++; // Move to the next key character
-            } else {
+            } 
+            else {
                 // Non-alphabetic characters remain unchanged
                 result += char;
             }
